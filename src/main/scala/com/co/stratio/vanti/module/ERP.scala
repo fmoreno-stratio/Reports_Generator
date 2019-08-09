@@ -1,4 +1,5 @@
 package com.co.stratio.vanti.module
+
 case class ERP
 (
   var module: String = "",
@@ -28,8 +29,5 @@ case class ERP
   var difCountRow: String = "",
   var status: String = "",
   var generationDate: String = ""
-
-){
-  override def toString: String = super.toString
-}
+)
 
