@@ -1,12 +1,13 @@
 package com.co.stratio.vanti.module
 
-case class ISU
+case class Module
 (
-  modulo: String = "ISU",
+
+  var module: String = "",
   var reportType: String = "",
   var reportPath: String = "",
   var fileGeneratedDate: String = "",
-  var infoFile: String = "",
+  var zipInformation: String = "",
   var zipName: String = "",
   var zipDirectory: String = "",
   var zipPath: String = "",
@@ -35,3 +36,4 @@ case class ISU
   var status: String = "",
   var generationDate: String = ""
 )
+
