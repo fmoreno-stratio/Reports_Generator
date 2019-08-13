@@ -85,12 +85,10 @@
         </plugins>
     </build>
 
-
     <repositories>
         <repository>
             <id>releases</id>
             <url>http://qa.stratio.com/repository/releases</url>
         </repository>
     </repositories>
-
 </project>

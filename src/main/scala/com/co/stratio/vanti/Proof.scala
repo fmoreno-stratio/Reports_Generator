@@ -6,10 +6,11 @@ import com.co.stratio.vanti.commons.UtilsGenerateReport
 import com.co.stratio.vanti.module.Module
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs._
+import org.apache.hadoop.io.IOUtils
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SaveMode, SparkSession}
-
+import org.apache.spark.sql.functions._
 import scala.io.{BufferedSource, Source}
 import scala.util.{Failure, Success, Try}
 
@@ -43,8 +44,6 @@ object Proof {
   val pathOutputParquet: String = properties("pathOutputParquet")
   val pathOutputCsv: String = properties("pathOutputCsv")
 
-  var overrideParquet: Boolean = !fs.exists(new Path(s"${pathOutputParquet}"))
-
   val columnsReport: Array[String] = properties("headers").split(";")
   val delimiterRow = "Ç"
 
@@ -60,20 +59,24 @@ object Proof {
         val pathName = fileStatus.getPath.getName
         val pathFile = fileStatus.getPath
 
-        if (pathName.endsWith(extFile) && !fs.exists(new Path(s"$pathDirectory.CORRECT"))) {
-          readFiles(pathFile) match {
+        if (pathName.endsWith(extFile) && !fs.exists(new Path(s"$pathDirectory.OFRCORRECT"))) {
+          val stream: FSDataInputStream = fs.open(pathFile)
+          val source: BufferedSource = Source.fromInputStream(stream)
+          readFiles(pathFile, source) match {
             case Success(_) => {
-              val fileOut: FSDataOutputStream = fs.create(new Path(s"$pathDirectory.CORRECT"))
-              fileOut.write("[Insert here message for correct]".getBytes())
+              val fileOut: FSDataOutputStream = fs.create(new Path(s"$pathDirectory.OFRCORRECT"))
+              fileOut.write(s"[OK] - Creación de parquet exitosa para el informe $pathFile".getBytes())
               fileOut.close()
             }
             case Failure(fail) => {
               fail.printStackTrace()
-              val fileOut: FSDataOutputStream = fs.create(new Path(s"$pathDirectory.INCORRECT"))
-              fileOut.write("[Insert here message for incorrect]".getBytes())
+              val fileOut: FSDataOutputStream = fs.create(new Path(s"$pathDirectory.OFRINCORRECT"))
+              fileOut.write(s"[NOT OK] - Creación de parquet no exitosa para el informe $pathFile".getBytes())
               fileOut.close()
             }
           }
+          source.close()
+          IOUtils.closeStream(stream)
         }
       } catch {
         case e: Exception => e.printStackTrace()
@@ -81,9 +84,8 @@ object Proof {
     }
   }
 
-  private def readFiles(pathFile: Path) = Try {
-    val stream: FSDataInputStream = fs.open(pathFile)
-    val source: BufferedSource = Source.fromInputStream(stream)
+  private def readFiles(pathFile: Path, source: Source) = Try {
+
     val sc = sparkSession.sparkContext
     val gl: Iterator[String] = source.getLines
     val rdd = sc.parallelize(gl.toSeq)
@@ -102,8 +104,10 @@ object Proof {
         concat = s"$concat$t"
         if (module.equals("ERP")) {
           strObj = splitInfoERP(concat.split(delimiterRow))
-        } else {
+        } else if(module.equals("ISU")) {
           strObj = splitInfoISU(concat.split(delimiterRow))
+        } else if (module.equals("SAT")){
+          // TODO: Do to Satelites' module case
         }
         concat = ""
       }
@@ -112,22 +116,16 @@ object Proof {
       x.mkString.nonEmpty
     })
 
-    val dF = sparkSession.createDataFrame(rowsReport, UtilsGenerateReport.generateSchema(columnsReport.toList))
+    val dF = sparkSession.createDataFrame(rowsReport, UtilsGenerateReport.generateSchema(columnsReport.toList)).distinct().orderBy(col("NOMBRE_DE_TABLA_ASIGNADO_EN_LANDING_RAW_POR_ARCHIVO"), col("DIFERENCIA_TOTAL_REGISTROS").asc)
     dF.show()
 
-    dF.write
+    dF.repartition(1).write
       .mode(SaveMode.Overwrite)
       .option("header", "true")
       .option("quoteAll", "true")
       .csv(pathOutputCsv)
 
-    if (overrideParquet) {
-      dF.repartition(1).write.mode(SaveMode.Overwrite).parquet(pathOutputParquet)
-      overrideParquet = false
-    }
-    else dF.repartition(1).write.mode(SaveMode.Append).parquet(pathOutputParquet)
-    stream.close()
-    source.close()
+    dF.repartition(1).write.mode(SaveMode.Append).parquet(pathOutputParquet)
   }
 
   private def splitInfoERP(f: Array[String]) = {
