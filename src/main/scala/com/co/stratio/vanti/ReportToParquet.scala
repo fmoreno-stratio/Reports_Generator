@@ -8,6 +8,7 @@ import com.stratio.sparta.sdk.lite.common.LiteCustomOutput
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FSDataInputStream, FSDataOutputStream, FileSystem, LocatedFileStatus, Path, RemoteIterator}
 import org.apache.hadoop.io.IOUtils
+import org.apache.log4j.{Level, Logger}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkSession}
@@ -18,10 +19,8 @@ import scala.util.{Failure, Success, Try}
 class ReportToParquet(sparkSession: SparkSession, properties: Map[String, String])
   extends LiteCustomOutput(sparkSession, properties) {
 
-  override def save(data: DataFrame, saveMode: String, saveOptions: Map[String, String]): Unit = {
-    initializer()
-  }
 
+  val nameClass: String = getClass.getName
   val configuration: Configuration = new Configuration()
   val fs: FileSystem = FileSystem.get(configuration)
 
@@ -34,8 +33,13 @@ class ReportToParquet(sparkSession: SparkSession, properties: Map[String, String
   val pathOutputParquet: String = properties("pathOutputParquet")
   val pathOutputCsv: String = properties("pathOutputCsv")
 
-  val columnsReport: Array[String] = properties("headers").split(";")
+  val columnsReport = properties("headers")
   val delimiterRow = "Ç"
+
+  override def save(data: DataFrame, saveMode: String, saveOptions: Map[String, String]): Unit = {
+    initializer()
+  }
+
 
   private def initializer(): Unit = {
     val fileStatusListIterator: RemoteIterator[LocatedFileStatus] = fs.listFiles(new Path(pathDirectory), true)
@@ -54,8 +58,7 @@ class ReportToParquet(sparkSession: SparkSession, properties: Map[String, String
               fileOut.write(s"[OK] - Creación de parquet exitosa para el informe $pathFile".getBytes())
               fileOut.close()
             }
-            case Failure(fail) => {
-              fail.printStackTrace()
+            case Failure(_) => {
               val fileOut: FSDataOutputStream = fs.create(new Path(s"$pathDirectory.OFRINCORRECT"))
               fileOut.write(s"[NOT OK] - Creación de parquet no exitosa para el informe $pathFile".getBytes())
               fileOut.close()
@@ -65,7 +68,7 @@ class ReportToParquet(sparkSession: SparkSession, properties: Map[String, String
           IOUtils.closeStream(stream)
         }
       } catch {
-        case e: Exception => e.printStackTrace()
+        case fail: Throwable => UtilsGenerateReport.printError(log, fail, nameClass, "save.initializer")
       }
     }
   }
@@ -102,7 +105,7 @@ class ReportToParquet(sparkSession: SparkSession, properties: Map[String, String
       x.mkString.nonEmpty
     })
 
-    val dF = sparkSession.createDataFrame(rowsReport, UtilsGenerateReport.generateSchema(columnsReport.toList)).distinct().orderBy(col("NOMBRE_DE_TABLA_ASIGNADO_EN_LANDING_RAW_POR_ARCHIVO"), col("DIFERENCIA_TOTAL_REGISTROS").asc)
+    val dF = sparkSession.createDataFrame(rowsReport, UtilsGenerateReport.generateSchema(columnsReport.split(";").toList)).distinct().orderBy(col("NOMBRE_DE_TABLA_ASIGNADO_EN_LANDING_RAW_POR_ARCHIVO"), col("DIFERENCIA_TOTAL_REGISTROS").asc)
     dF.show()
 
     dF.repartition(1).write

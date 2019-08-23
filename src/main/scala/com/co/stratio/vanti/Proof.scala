@@ -19,7 +19,7 @@ object Proof {
   Logger.getLogger("org").setLevel(Level.ERROR)
 
   val properties: Map[String, String] = Map(
-    "pathDirectory" -> "/home/proyecto/Documentos/[ISU]_REPORT_PARQUET_DATE_OF_PROCESS[04-08-2019T13_52_37].TXT", //"C:\\SparkScala\\DataToFormatColumnar\\DataToFormatColumnar\\landingRaw\\ERP\\reports\\",
+    "pathDirectory" -> "/home/fernanda/Escritorio/Prueba", //"C:\\SparkScala\\DataToFormatColumnar\\DataToFormatColumnar\\landingRaw\\ERP\\reports\\",
     "pathOutputParquet" -> "out/officialParquet",
     "pathOutputCsv" -> "out/officialCsv",
     "module" -> "ISU",
@@ -59,18 +59,18 @@ object Proof {
         val pathName = fileStatus.getPath.getName
         val pathFile = fileStatus.getPath
 
-        if (pathName.endsWith(extFile) && !fs.exists(new Path(s"$pathDirectory.OFRCORRECT"))) {
+        if (pathName.endsWith(extFile) && !fs.exists(new Path(s"$pathDirectory/$pathName.OFRCORRECT"))) {
           val stream: FSDataInputStream = fs.open(pathFile)
           val source: BufferedSource = Source.fromInputStream(stream)
           readFiles(pathFile, source) match {
             case Success(_) => {
-              val fileOut: FSDataOutputStream = fs.create(new Path(s"$pathDirectory.OFRCORRECT"))
+              val fileOut: FSDataOutputStream = fs.create(new Path(s"$pathDirectory/$pathName.OFRCORRECT"))
               fileOut.write(s"[OK] - Creación de parquet exitosa para el informe $pathFile".getBytes())
               fileOut.close()
             }
             case Failure(fail) => {
               fail.printStackTrace()
-              val fileOut: FSDataOutputStream = fs.create(new Path(s"$pathDirectory.OFRINCORRECT"))
+              val fileOut: FSDataOutputStream = fs.create(new Path(s"$pathDirectory/$pathName.OFRINCORRECT"))
               fileOut.write(s"[NOT OK] - Creación de parquet no exitosa para el informe $pathFile".getBytes())
               fileOut.close()
             }
@@ -105,6 +105,7 @@ object Proof {
         if (module.equals("ERP")) {
           strObj = splitInfoERP(concat.split(delimiterRow))
         } else if(module.equals("ISU")) {
+          println(s"OBJETO----$concat")
           strObj = splitInfoISU(concat.split(delimiterRow))
         } else if (module.equals("SAT")){
           // TODO: Do to Satelites' module case
@@ -266,9 +267,10 @@ object Proof {
   }
 
   private def getFields(rdd: RDD[String], pathFile: Path): String = {
-    val reportPath = pathFile
+    val reportPath = pathFile.toString
     val matchType = "parquet"
     val dR = "Ç"
+    println(s"$dR$module$dR$matchType$dR$reportPath")
     s"$dR$module$dR$matchType$dR$reportPath"
   }
 
