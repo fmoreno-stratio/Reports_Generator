@@ -19,13 +19,14 @@ object Proof {
   Logger.getLogger("org").setLevel(Level.ERROR)
 
   val properties: Map[String, String] = Map(
-    "pathDirectory" -> "/home/fernanda/Escritorio/Prueba", //"C:\\SparkScala\\DataToFormatColumnar\\DataToFormatColumnar\\landingRaw\\ERP\\reports\\",
+//    "pathDirectory" -> "/home/fernanda/Escritorio/Prueba", //"C:\\SparkScala\\DataToFormatColumnar\\DataToFormatColumnar\\landingRaw\\ERP\\reports\\",
+    "pathDirectory" -> "C:\\Users\\luisa\\luis\\Stratio\\VANTI\\info_paths_hdfs\\ISU\\CI\\reports", //"C:\\SparkScala\\DataToFormatColumnar\\DataToFormatColumnar\\landingRaw\\ERP\\reports\\",
     "pathOutputParquet" -> "out/officialParquet",
     "pathOutputCsv" -> "out/officialCsv",
     "module" -> "ISU",
     "extFile" -> ".TXT",
     "charset" -> "",
-    "headers" -> "MODULO;TIPO_DE_REPORTE;RUTA_DE_REPORTE;FECHA_DE_GENERACION_DE_REPORTE;INFORMACION_ZIP;NOMBRE_ZIP;DIRECTORIO_ZIP;RUTA_ZIP;TAMANO_ZIP;ARCHIVO_PROCESADO;NOMBRE_DE_TABLA_ASIGNADO_EN_LANDING_RAW_POR_ARCHIVO;NOMBRE_DE_TABLA_ASIGNADO_EN_LOS_PARAMETROS;CABECERA_ASIGNADA;CONTEO_CABECERA_ASIGNADO_ENVIADO_POR_EL_SISTEMA;CONTEO_CABECERA_POR_ARCHIVO;CABECERA_IDENTIFICADA_EN_EL_ARCHIVO;CABECERAS_IGUALES;NOMBRE_DE_DIRECTORIO;RUTA_EN_LANDING_RAW_ARCHIVO_SIN_TRANSFORMAR;TAMANO_DE_ARCHIVO_BYTES;VALIDACION_SHA;FORMATO_DE_ALMACENAMIENTO_DE_ARCHIVO_TRANSFORMADO;NOMBRE_TABLA;RUTA_EN_LANDINGRAW;TOTAL_COLUMNAS_PREPARACION_DE_MARCO_DE_DATOS;TOTAL_REGISTROS_PREPARACION_DE_MARCO_DE_DATOS;TOTAL_COLUMNAS_OFICIAL;TOTAL_REGISTROS_OFICIAL;DIFERENCIA_TOTAL_COLUMNAS;DIFERENCIA_TOTAL_REGISTROS;ESTADO_DEL_PROCESO;GEBERATION_DATE"
+    "headers" -> "MODULO;TIPO_DE_REPORTE;RUTA_DE_REPORTE;FECHA_DE_GENERACION_DE_REPORTE;INFORMACION_ZIP;NOMBRE_ZIP;DIRECTORIO_ZIP;RUTA_ZIP;TAMANO_ZIP;ARCHIVO_PROCESADO;NOMBRE_DE_TABLA_ASIGNADO_EN_LANDING_RAW_POR_ARCHIVO;NOMBRE_DE_TABLA_ASIGNADO_EN_LOS_PARAMETROS;CABECERA_ASIGNADA;CONTEO_CABECERA_ASIGNADO_ENVIADO_POR_EL_SISTEMA;CONTEO_CABECERA_POR_ARCHIVO;CABECERA_IDENTIFICADA_EN_EL_ARCHIVO;CABECERAS_IGUALES;NOMBRE_DE_DIRECTORIO;RUTA_EN_LANDING_RAW_ARCHIVO_SIN_TRANSFORMAR;TAMANO_DE_ARCHIVO_BYTES;VALIDACION_SHA;FORMATO_DE_ALMACENAMIENTO_DE_ARCHIVO_TRANSFORMADO;NOMBRE_TABLA;RUTA_EN_LANDINGRAW;TOTAL_COLUMNAS_PREPARACION_DE_MARCO_DE_DATOS;TOTAL_REGISTROS_PREPARACION_DE_MARCO_DE_DATOS;TOTAL_COLUMNAS_OFICIAL;TOTAL_REGISTROS_OFICIAL;DIFERENCIA_TOTAL_COLUMNAS;DIFERENCIA_TOTAL_REGISTROS;ESTADO_DEL_PROCESO;GENERATION_DATE"
   )
   val sparkSession: SparkSession = SparkSession.builder()
     .appName("dat - Local")
@@ -45,7 +46,7 @@ object Proof {
   val pathOutputCsv: String = properties("pathOutputCsv")
 
   val columnsReport: Array[String] = properties("headers").split(";")
-  val delimiterRow = "Ç"
+  val delimiterRow = "&"
 
   def main(args: Array[String]): Unit = {
     initializer()
@@ -91,10 +92,10 @@ object Proof {
     val rdd = sc.parallelize(gl.toSeq)
     var concat = ""
 
-    val splitByChar = ":"
+    val splitByChar = ": "
     val limitBlock = "status"
 
-    val t = getFields(rdd, pathFile)
+    val t: String = getFields(rdd, pathFile)
 
     val rowsReport: RDD[Row] = rdd.repartition(1).map(line => {
       val l = line.split(splitByChar)
@@ -269,7 +270,7 @@ object Proof {
   private def getFields(rdd: RDD[String], pathFile: Path): String = {
     val reportPath = pathFile.toString
     val matchType = "parquet"
-    val dR = "Ç"
+    val dR = "&"
     println(s"$dR$module$dR$matchType$dR$reportPath")
     s"$dR$module$dR$matchType$dR$reportPath"
   }
